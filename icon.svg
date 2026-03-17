@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="camBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff5555"/>
+      <stop offset="100%" stop-color="#cc2222"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#141414"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="100" ry="100" fill="url(#bg)"/>
+  <!-- Camera body -->
+  <rect x="60" y="150" width="300" height="212" rx="24" ry="24" fill="url(#camBody)"/>
+  <!-- Camera lens/viewfinder triangle -->
+  <polygon points="380,180 452,148 452,364 380,332" fill="url(#camBody)" opacity="0.85"/>
+  <!-- Lens circle on body -->
+  <circle cx="210" cy="256" r="60" fill="url(#lens)" stroke="#ff3b3b" stroke-width="4"/>
+  <circle cx="210" cy="256" r="38" fill="none" stroke="#333" stroke-width="3"/>
+  <circle cx="210" cy="256" r="16" fill="#ff3b3b" opacity="0.6"/>
+  <!-- Record indicator dot -->
+  <circle cx="105" cy="190" r="12" fill="#ff0000">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+</svg>

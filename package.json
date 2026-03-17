@@ -19,12 +19,16 @@
       "main.js",
       "preload.js",
       "lib/**/*",
-      "renderer/**/*"
+      "renderer/**/*",
+      "public/**/*",
+      "icon.svg"
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "icon.ico",
+      "sign": false
     },
+    "forceCodeSigning": false,
     "mac": {
       "target": "dmg",
       "icon": "icon.icns",
