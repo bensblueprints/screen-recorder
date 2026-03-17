@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Recorder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- Device Selection -->
+    <header class="controls">
+      <div class="device-row">
+        <div class="device-group">
+          <label for="webcam">Webcam</label>
+          <select id="webcam"><option value="">None</option></select>
+        </div>
+        <div class="device-group">
+          <label for="mic">Microphone</label>
+          <select id="mic"><option value="">None (no audio)</option></select>
+        </div>
+        <div class="device-group">
+          <label for="resolution">Webcam Res</label>
+          <select id="resolution">
+            <option value="1920x1080">1080p</option>
+            <option value="1280x720" selected>720p</option>
+            <option value="640x480">480p</option>
+          </select>
+        </div>
+      </div>
+      <div class="encoder-badge" id="encoderBadge">Detecting encoder...</div>
+    </header>
+
+    <!-- Preview Panels -->
+    <main class="previews">
+      <div class="preview-panel" id="screenPanel">
+        <div class="preview-label">Screen</div>
+        <video id="screenPreview" autoplay muted playsinline></video>
+        <div class="preview-placeholder" id="screenPlaceholder">
+          Click to enable screen preview
+        </div>
+      </div>
+      <div class="preview-panel" id="webcamPanel">
+        <div class="preview-label">Webcam</div>
+        <video id="webcamPreview" autoplay muted playsinline></video>
+        <div class="preview-placeholder" id="webcamPlaceholder">
+          Select a webcam above
+        </div>
+      </div>
+    </main>
+
+    <!-- Recording Controls -->
+    <footer class="recording-bar">
+      <button id="recordBtn" class="record-btn" disabled>
+        <span class="record-dot"></span>
+        <span id="recordLabel">Record</span>
+      </button>
+      <div class="stats">
+        <div class="timer" id="timer">00:00:00</div>
+        <div class="file-info" id="fileInfo"></div>
+      </div>
+      <button id="folderBtn" class="folder-btn" title="Open recordings folder">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+        </svg>
+      </button>
+    </footer>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
