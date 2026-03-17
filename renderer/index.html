@@ -13,7 +13,11 @@
     <header class="controls">
       <div class="device-row">
         <div class="device-group">
-          <label for="webcam">Webcam</label>
+          <label for="screenSelect">Screen</label>
+          <select id="screenSelect"><option value="">Loading...</option></select>
+        </div>
+        <div class="device-group">
+          <label for="webcam">Camera</label>
           <select id="webcam"><option value="">None</option></select>
         </div>
         <div class="device-group">
@@ -21,16 +25,33 @@
           <select id="mic"><option value="">None (no audio)</option></select>
         </div>
         <div class="device-group">
-          <label for="resolution">Webcam Res</label>
+          <label for="resolution">Cam Res</label>
           <select id="resolution">
             <option value="1920x1080">1080p</option>
             <option value="1280x720" selected>720p</option>
             <option value="640x480">480p</option>
           </select>
         </div>
+        <div class="device-group device-group-btn">
+          <label>&nbsp;</label>
+          <button id="refreshBtn" class="refresh-btn" title="Refresh devices">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="encoder-badge" id="encoderBadge">Detecting encoder...</div>
     </header>
+
+    <!-- Output Folder -->
+    <div class="output-bar">
+      <strong>Output:</strong>
+      <span id="outputPath">Loading...</span>
+      <button id="changeOutputBtn">Change</button>
+      <button id="openOutputBtn">Open</button>
+    </div>
 
     <!-- Preview Panels -->
     <main class="previews">

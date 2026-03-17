@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, shell, screen, dialog } = require('electron');
 const path = require('path');
 const devices = require('./lib/devices');
 const recorder = require('./lib/recorder');
@@ -38,6 +38,20 @@ ipcMain.handle('get-screen-sources', async () => {
   }));
 });
 
+ipcMain.handle('get-displays', () => {
+  const displays = screen.getAllDisplays();
+  return displays.map((d, i) => ({
+    id: d.id,
+    name: `Display ${i + 1}${d.bounds.x === 0 && d.bounds.y === 0 ? ' (Primary)' : ''}`,
+    width: d.bounds.width * d.scaleFactor,
+    height: d.bounds.height * d.scaleFactor,
+    x: d.bounds.x,
+    y: d.bounds.y,
+    scaleFactor: d.scaleFactor,
+    label: `${Math.round(d.bounds.width * d.scaleFactor)}x${Math.round(d.bounds.height * d.scaleFactor)}`,
+  }));
+});
+
 ipcMain.handle('start-recording', async (event, opts) => {
   return recorder.start(opts, (update) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -57,6 +71,19 @@ ipcMain.handle('get-config', () => ({
 
 ipcMain.handle('open-folder', (event, folderPath) => {
   shell.openPath(folderPath);
+});
+
+ipcMain.handle('choose-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Choose recordings folder',
+    defaultPath: config.outputDir,
+  });
+  if (!result.canceled && result.filePaths[0]) {
+    config.outputDir = result.filePaths[0];
+    return result.filePaths[0];
+  }
+  return null;
 });
 
 // ── App lifecycle ──

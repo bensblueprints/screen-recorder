@@ -4,9 +4,12 @@ let encoder = 'libx264';
 let outputDir = '';
 let screenStream = null;
 let webcamStream = null;
+let displays = [];       // Electron display objects with bounds
+let screenSources = [];  // desktopCapturer sources for preview
 
 // ── DOM refs ──
 const $ = (s) => document.querySelector(s);
+const screenSelect = $('#screenSelect');
 const webcamSelect = $('#webcam');
 const micSelect = $('#mic');
 const resolutionSelect = $('#resolution');
@@ -15,73 +18,167 @@ const screenPreview = $('#screenPreview');
 const webcamPreview = $('#webcamPreview');
 const screenPlaceholder = $('#screenPlaceholder');
 const webcamPlaceholder = $('#webcamPlaceholder');
-const screenPanel = $('#screenPanel');
 const recordBtn = $('#recordBtn');
 const recordLabel = $('#recordLabel');
 const timer = $('#timer');
 const fileInfo = $('#fileInfo');
 const folderBtn = $('#folderBtn');
+const refreshBtn = $('#refreshBtn');
+const outputPath = $('#outputPath');
+const changeOutputBtn = $('#changeOutputBtn');
+const openOutputBtn = $('#openOutputBtn');
 
 // ── Init ──
 async function init() {
-  const [deviceData, configData] = await Promise.all([
+  await loadDevices();
+  recordBtn.disabled = false;
+}
+
+async function loadDevices() {
+  const [ffmpegDevices, configData, displayList, sources] = await Promise.all([
     window.api.getDevices(),
     window.api.getConfig(),
+    window.api.getDisplays(),
+    window.api.getScreenSources(),
   ]);
 
   outputDir = configData.outputDir;
-  encoder = deviceData.encoder;
+  outputPath.textContent = outputDir;
+  encoder = ffmpegDevices.encoder;
+  displays = displayList;
+  screenSources = sources;
 
-  // Populate webcam dropdown
-  webcamSelect.innerHTML = '<option value="">None</option>';
-  for (const cam of deviceData.cameras) {
-    const name = typeof cam === 'string' ? cam : cam.name;
-    const val = typeof cam === 'string' ? cam : cam.id;
+  // Also get browser media devices (catches USB cameras/mics FFmpeg might miss)
+  let browserVideos = [];
+  let browserAudios = [];
+  try {
+    // Request permission first so labels are populated
+    const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch(() => null);
+    if (tempStream) tempStream.getTracks().forEach(t => t.stop());
+
+    const browserDevices = await navigator.mediaDevices.enumerateDevices();
+    browserVideos = browserDevices.filter(d => d.kind === 'videoinput' && d.label);
+    browserAudios = browserDevices.filter(d => d.kind === 'audioinput' && d.label);
+  } catch (e) {
+    console.warn('Browser device enumeration failed:', e);
+  }
+
+  // ── Populate screen dropdown ──
+  screenSelect.innerHTML = '';
+  if (displays.length <= 1) {
     const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = name;
+    opt.value = '0';
+    opt.textContent = displays[0] ? `${displays[0].name} (${displays[0].label})` : 'Entire Screen';
+    opt.dataset.bounds = JSON.stringify(displays[0] || {});
+    screenSelect.appendChild(opt);
+  } else {
+    displays.forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = `${d.name} - ${d.label}`;
+      opt.dataset.bounds = JSON.stringify(d);
+      screenSelect.appendChild(opt);
+    });
+  }
+
+  // ── Populate camera dropdown (merge FFmpeg + browser) ──
+  const cameraNames = new Set();
+  const cameras = [];
+
+  // FFmpeg cameras first (these names are what FFmpeg needs for recording)
+  for (const cam of ffmpegDevices.cameras) {
+    const name = typeof cam === 'string' ? cam : cam.name;
+    cameras.push({ name, ffmpegName: name });
+    cameraNames.add(name.toLowerCase());
+  }
+
+  // Add browser cameras that FFmpeg didn't find (e.g. USB cameras like Osmo Pocket)
+  for (const bd of browserVideos) {
+    const alreadyListed = [...cameraNames].some(n =>
+      bd.label.toLowerCase().includes(n) || n.includes(bd.label.toLowerCase())
+    );
+    if (!alreadyListed) {
+      cameras.push({ name: bd.label, ffmpegName: bd.label });
+      cameraNames.add(bd.label.toLowerCase());
+    }
+  }
+
+  webcamSelect.innerHTML = '<option value="">None</option>';
+  for (const cam of cameras) {
+    const opt = document.createElement('option');
+    opt.value = cam.ffmpegName;
+    opt.textContent = cam.name;
     webcamSelect.appendChild(opt);
   }
 
-  // Populate mic dropdown
-  micSelect.innerHTML = '<option value="">None (no audio)</option>';
-  for (const mic of deviceData.audio) {
+  // ── Populate mic dropdown (merge FFmpeg + browser) ──
+  const micNames = new Set();
+  const mics = [];
+
+  for (const mic of ffmpegDevices.audio) {
     const name = typeof mic === 'string' ? mic : mic.name;
-    const val = typeof mic === 'string' ? mic : mic.id;
+    mics.push({ name, ffmpegName: name });
+    micNames.add(name.toLowerCase());
+  }
+
+  for (const bd of browserAudios) {
+    if (bd.label.toLowerCase().includes('default')) continue;
+    const alreadyListed = [...micNames].some(n =>
+      bd.label.toLowerCase().includes(n) || n.includes(bd.label.toLowerCase())
+    );
+    if (!alreadyListed) {
+      mics.push({ name: bd.label, ffmpegName: bd.label });
+      micNames.add(bd.label.toLowerCase());
+    }
+  }
+
+  micSelect.innerHTML = '<option value="">None (no audio)</option>';
+  for (const mic of mics) {
     const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = name;
+    opt.value = mic.ffmpegName;
+    opt.textContent = mic.name;
     micSelect.appendChild(opt);
   }
   // Auto-select first mic
-  if (deviceData.audio.length > 0) micSelect.selectedIndex = 1;
+  if (mics.length > 0) micSelect.selectedIndex = 1;
 
   // Encoder badge
   const isHW = encoder !== 'libx264';
-  encoderBadge.textContent = `Encoder: ${encoder}${isHW ? ' (hardware)' : ' (software)'}`;
+  encoderBadge.textContent = `Encoder: ${encoder}${isHW ? ' (hardware)' : ' (software)'} | ${cameras.length} cam, ${mics.length} mic, ${displays.length} display`;
   encoderBadge.className = `encoder-badge ${isHW ? 'hw' : 'sw'}`;
 
-  recordBtn.disabled = false;
-
-  // Auto-select first webcam
-  if (deviceData.cameras.length > 0) {
+  // Auto-select first webcam and start preview
+  if (cameras.length > 0) {
     webcamSelect.selectedIndex = 1;
     startWebcamPreview();
   }
+
+  // Auto-start screen preview
+  startScreenPreview();
 }
 
 // ── Screen preview via desktopCapturer ──
 async function startScreenPreview() {
+  // Stop existing
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+  }
+
   try {
-    const sources = await window.api.getScreenSources();
-    if (sources.length === 0) return;
+    if (screenSources.length === 0) return;
+
+    // Match the selected display to a desktopCapturer source
+    const selectedIdx = parseInt(screenSelect.value) || 0;
+    // desktopCapturer sources are ordered same as displays, pick matching one
+    const source = screenSources[selectedIdx] || screenSources[0];
 
     screenStream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
         mandatory: {
           chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sources[0].id,
+          chromeMediaSourceId: source.id,
           maxFrameRate: 15,
         }
       }
@@ -93,39 +190,50 @@ async function startScreenPreview() {
   } catch (e) {
     console.error('Screen preview failed:', e);
     screenPlaceholder.textContent = 'Screen preview unavailable';
+    screenPlaceholder.classList.remove('hidden');
+    screenPreview.classList.remove('active');
   }
 }
 
 // ── Webcam preview via getUserMedia ──
 async function startWebcamPreview() {
-  // Stop existing stream
   if (webcamStream) {
     webcamStream.getTracks().forEach(t => t.stop());
     webcamStream = null;
   }
 
-  const deviceId = webcamSelect.value;
-  if (!deviceId) {
+  const selectedName = webcamSelect.value;
+  if (!selectedName) {
     webcamPreview.classList.remove('active');
     webcamPlaceholder.classList.remove('hidden');
-    webcamPlaceholder.textContent = 'Select a webcam above';
+    webcamPlaceholder.textContent = 'Select a camera above';
     return;
   }
 
   try {
-    // On Windows, we can't use deviceId constraint for dshow devices
-    // Instead, enumerate browser media devices and match by label
     const browserDevices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = browserDevices.filter(d => d.kind === 'videoinput');
 
-    // Try to find matching device by label containing the selected name
-    let constraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
-    const matchedDevice = videoDevices.find(d => d.label.includes(deviceId) || deviceId.includes(d.label));
-    if (matchedDevice) {
-      constraints.video.deviceId = { exact: matchedDevice.deviceId };
+    let constraints = {
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    };
+
+    // Match by label (fuzzy: check if either contains the other)
+    const matched = videoDevices.find(d => {
+      const bl = d.label.toLowerCase();
+      const sl = selectedName.toLowerCase();
+      return bl.includes(sl) || sl.includes(bl) || bl === sl;
+    });
+
+    if (matched) {
+      constraints.video.deviceId = { exact: matched.deviceId };
     } else if (videoDevices.length > 0) {
-      // Fall back to first available device
-      constraints.video.deviceId = { exact: videoDevices[0].deviceId };
+      // Fall back — try each device by index matching the dropdown position
+      const idx = webcamSelect.selectedIndex - 1; // -1 for "None" option
+      if (idx >= 0 && idx < videoDevices.length) {
+        constraints.video.deviceId = { exact: videoDevices[idx].deviceId };
+      }
     }
 
     webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -134,8 +242,9 @@ async function startWebcamPreview() {
     webcamPlaceholder.classList.add('hidden');
   } catch (e) {
     console.error('Webcam preview failed:', e);
-    webcamPlaceholder.textContent = 'Webcam preview failed';
+    webcamPlaceholder.textContent = `Preview failed: ${e.message}`;
     webcamPlaceholder.classList.remove('hidden');
+    webcamPreview.classList.remove('active');
   }
 }
 
@@ -160,7 +269,6 @@ function basename(filepath) {
 // ── Recording ──
 async function toggleRecording() {
   if (isRecording) {
-    // Stop
     recordBtn.disabled = true;
     recordLabel.textContent = 'Stopping...';
 
@@ -171,18 +279,26 @@ async function toggleRecording() {
     recordLabel.textContent = 'Record';
     timer.classList.remove('recording');
 
-    // Show final files
     const parts = [];
     if (result.screenFile) parts.push(basename(result.screenFile));
     if (result.webcamFile) parts.push(basename(result.webcamFile));
     fileInfo.textContent = parts.length ? `Saved: ${parts.join(' + ')}` : '';
   } else {
-    // Start
+    // Build display bounds for the selected screen
+    const selectedIdx = parseInt(screenSelect.value) || 0;
+    const display = displays[selectedIdx] || null;
+
     const opts = {
       encoder,
       webcamDevice: webcamSelect.value || null,
       audioDevice: micSelect.value || null,
       resolution: resolutionSelect.value,
+      display: display ? {
+        x: display.x,
+        y: display.y,
+        width: display.width,
+        height: display.height,
+      } : null,
     };
 
     recordBtn.disabled = true;
@@ -217,12 +333,25 @@ window.api.onRecordingUpdate((status) => {
 // ── Event listeners ──
 recordBtn.addEventListener('click', toggleRecording);
 webcamSelect.addEventListener('change', startWebcamPreview);
+screenSelect.addEventListener('change', startScreenPreview);
 folderBtn.addEventListener('click', () => window.api.openFolder(outputDir));
-screenPanel.addEventListener('click', () => {
-  if (!screenStream) startScreenPreview();
+openOutputBtn.addEventListener('click', () => window.api.openFolder(outputDir));
+changeOutputBtn.addEventListener('click', async () => {
+  const newPath = await window.api.chooseFolder();
+  if (newPath) {
+    outputDir = newPath;
+    outputPath.textContent = newPath;
+  }
+});
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.disabled = true;
+  refreshBtn.style.opacity = '0.4';
+  await loadDevices();
+  refreshBtn.disabled = false;
+  refreshBtn.style.opacity = '1';
 });
 
-// ── Keyboard shortcut: Space to toggle recording ──
+// Keyboard shortcut: Space to toggle recording
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && e.target.tagName !== 'SELECT') {
     e.preventDefault();

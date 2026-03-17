@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   getDevices: () => ipcRenderer.invoke('get-devices'),
+  getDisplays: () => ipcRenderer.invoke('get-displays'),
+  chooseFolder: () => ipcRenderer.invoke('choose-folder'),
   getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
   startRecording: (opts) => ipcRenderer.invoke('start-recording', opts),
   stopRecording: () => ipcRenderer.invoke('stop-recording'),

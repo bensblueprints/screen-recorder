@@ -249,3 +249,61 @@ body {
   border-color: var(--text-dim);
   color: var(--text);
 }
+
+/* ── Refresh button ── */
+.device-group-btn {
+  flex: 0 0 auto;
+}
+
+.refresh-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.refresh-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+/* ── Output path bar ── */
+.output-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.output-bar span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.output-bar button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.output-bar button:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
