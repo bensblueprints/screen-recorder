@@ -72,6 +72,11 @@ ipcMain.handle('start-recording', async (event, opts) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('recording-update', update);
     }
+  }, (jpegBuf) => {
+    // Send webcam preview frames during recording
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('webcam-frame', jpegBuf.toString('base64'));
+    }
   });
 });
 

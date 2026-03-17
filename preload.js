@@ -17,4 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   onRecordingUpdate: (cb) => {
     ipcRenderer.on('recording-update', (_event, data) => cb(data));
   },
+  onWebcamFrame: (cb) => {
+    ipcRenderer.on('webcam-frame', (_event, base64) => cb(base64));
+  },
 });

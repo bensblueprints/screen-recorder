@@ -139,6 +139,17 @@ body {
   display: block;
 }
 
+.frame-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+}
+
+.frame-preview.active {
+  display: block;
+}
+
 .preview-placeholder {
   color: var(--text-dim);
   font-size: 13px;

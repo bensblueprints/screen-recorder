@@ -19,6 +19,7 @@ const screenPreview = $('#screenPreview');
 const webcamPreview = $('#webcamPreview');
 const screenPlaceholder = $('#screenPlaceholder');
 const webcamPlaceholder = $('#webcamPlaceholder');
+const webcamFramePreview = $('#webcamFramePreview');
 const recordBtn = $('#recordBtn');
 const recordLabel = $('#recordLabel');
 const timer = $('#timer');
@@ -66,10 +67,15 @@ async function loadDevices() {
     console.warn('Browser device enumeration failed:', e);
   }
 
-  // Browser appends USB vendor:product IDs like " (14ed:1019)" to labels
-  // Strip these so names match FFmpeg's DirectShow names
-  function stripUsbId(label) {
-    return label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, '').trim();
+  // Browser modifies device labels in ways FFmpeg doesn't expect:
+  // - Appends USB IDs: "Mic (Shure MV7+) (14ed:1019)"
+  // - Prepends role: "Communications - MOTIV Mix Virtual Output (Shure Virtual Audio)"
+  // - Prepends "Default - " for default devices
+  function cleanDeviceLabel(label) {
+    return label
+      .replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, '')  // strip USB ID
+      .replace(/^(Default|Communications)\s*-\s*/i, '')       // strip role prefix
+      .trim();
   }
 
   // ── Populate screen dropdown ──
@@ -103,7 +109,7 @@ async function loadDevices() {
 
   // Add browser cameras that FFmpeg didn't find (e.g. USB cameras like Osmo Pocket)
   for (const bd of browserVideos) {
-    const cleanLabel = stripUsbId(bd.label);
+    const cleanLabel = cleanDeviceLabel(bd.label);
     const alreadyListed = [...cameraNames].some(n =>
       cleanLabel.toLowerCase().includes(n) || n.includes(cleanLabel.toLowerCase())
     );
@@ -133,7 +139,7 @@ async function loadDevices() {
 
   for (const bd of browserAudios) {
     if (bd.label.toLowerCase().includes('default')) continue;
-    const cleanLabel = stripUsbId(bd.label);
+    const cleanLabel = cleanDeviceLabel(bd.label);
     const alreadyListed = [...micNames].some(n =>
       cleanLabel.toLowerCase().includes(n) || n.includes(cleanLabel.toLowerCase())
     );
@@ -277,20 +283,24 @@ function basename(filepath) {
   return filepath ? filepath.replace(/\\/g, '/').split('/').pop() : '';
 }
 
-// ── Release WEBCAM preview only (screen preview stays — gdigrab doesn't conflict) ──
+// ── Release WEBCAM getUserMedia preview, switch to FFmpeg frame preview ──
 function releaseWebcamPreview() {
   if (webcamStream) {
     webcamStream.getTracks().forEach(t => t.stop());
     webcamStream = null;
     webcamPreview.srcObject = null;
     webcamPreview.classList.remove('active');
-    webcamPlaceholder.textContent = 'Recording...';
-    webcamPlaceholder.classList.remove('hidden');
   }
+  // Show placeholder until FFmpeg frames start arriving
+  webcamPlaceholder.textContent = 'Starting...';
+  webcamPlaceholder.classList.remove('hidden');
 }
 
-// ── Restore webcam preview after recording stops ──
+// ── Restore getUserMedia preview after recording stops ──
 function restoreWebcamPreview() {
+  // Hide the FFmpeg frame preview
+  webcamFramePreview.classList.remove('active');
+  webcamFramePreview.src = '';
   if (webcamSelect.value) startWebcamPreview();
 }
 
@@ -379,7 +389,7 @@ async function toggleRecording() {
       timer.classList.add('recording');
       fileInfo.textContent = '';
       console.log('Recording started:', result);
-      stackBtn.classList.add('hidden'); // hide stack button during recording
+      stackBtn.classList.add('hidden');
     } catch (e) {
       console.error('Start failed:', e);
       const msg = (e.message || String(e)).replace('Error invoking remote method \'start-recording\': Error: ', '');
@@ -399,6 +409,16 @@ window.api.onRecordingUpdate((status) => {
   if (status.screenFile) parts.push(`Screen: ${formatBytes(status.screenSize)}`);
   if (status.webcamFile) parts.push(`Webcam: ${formatBytes(status.webcamSize)}`);
   fileInfo.textContent = parts.join('  |  ');
+});
+
+// ── Webcam preview frames from FFmpeg during recording ──
+window.api.onWebcamFrame((base64) => {
+  if (!isRecording) return;
+  webcamFramePreview.src = `data:image/jpeg;base64,${base64}`;
+  if (!webcamFramePreview.classList.contains('active')) {
+    webcamFramePreview.classList.add('active');
+    webcamPlaceholder.classList.add('hidden');
+  }
 });
 
 // ── Stack Export ──
