@@ -64,6 +64,8 @@ ipcMain.handle('get-displays', () => {
 });
 
 ipcMain.handle('start-recording', async (event, opts) => {
+  // Minimize to avoid recursive capture feedback loop (app showing its own preview)
+  if (mainWindow) mainWindow.minimize();
   return recorder.start(opts, (update) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('recording-update', update);
@@ -76,7 +78,15 @@ ipcMain.handle('start-recording', async (event, opts) => {
   });
 });
 
-ipcMain.handle('stop-recording', () => recorder.stop());
+ipcMain.handle('stop-recording', async () => {
+  const result = await recorder.stop();
+  // Restore window after recording stops
+  if (mainWindow) {
+    mainWindow.restore();
+    mainWindow.focus();
+  }
+  return result;
+});
 
 ipcMain.handle('stack-export', async (event, sessionPath, encoder) => {
   return recorder.stackExport(sessionPath, encoder, (progress) => {
