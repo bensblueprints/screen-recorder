@@ -364,10 +364,10 @@ async function toggleRecording() {
       audioDevice: micSelect.value || null,
       resolution: resolutionSelect.value,
       display: display ? {
-        x: display.x,
-        y: display.y,
         width: display.width,
         height: display.height,
+        cropX: display.cropX,
+        cropY: display.cropY,
       } : null,
     };
 

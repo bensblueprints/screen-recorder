@@ -40,28 +40,24 @@ ipcMain.handle('get-screen-sources', async () => {
 
 ipcMain.handle('get-displays', () => {
   const displays = screen.getAllDisplays();
-  // Get the full virtual desktop bounds to validate offsets
-  const allX = displays.map(d => d.bounds.x);
-  const allY = displays.map(d => d.bounds.y);
-  const minX = Math.min(...allX);
-  const minY = Math.min(...allY);
+  // Sort left-to-right by logical X position
+  const sorted = [...displays].sort((a, b) => a.bounds.x - b.bounds.x);
 
-  return displays.map((d, i) => {
-    const w = d.size.width;
-    const h = d.size.height;
-    // gdigrab uses (0,0) as top-left of virtual desktop
-    // Electron may report negative bounds if monitors are arranged above/left
-    // Offset from the min corner so gdigrab coords are always >= 0
-    const x = Math.round((d.bounds.x - minX) * d.scaleFactor);
-    const y = Math.round((d.bounds.y - minY) * d.scaleFactor);
+  // Compute physical pixel crop X offset by summing widths of displays to the left
+  let cropX = 0;
+  return sorted.map((d, i) => {
+    const w = d.size.width;   // physical pixels
+    const h = d.size.height;  // physical pixels
+    const x = cropX;
+    cropX += w;  // next display starts after this one
+    const isPrimary = d.bounds.x === 0 && d.bounds.y === 0;
     return {
       id: d.id,
-      name: `Display ${i + 1}${d.bounds.x === 0 && d.bounds.y === 0 ? ' (Primary)' : ''}`,
+      name: `Display ${i + 1}${isPrimary ? ' (Primary)' : ''}`,
       width: w,
       height: h,
-      x,
-      y,
-      scaleFactor: d.scaleFactor,
+      cropX: x,    // X offset for FFmpeg crop filter
+      cropY: 0,    // assume horizontal arrangement
       label: `${w}x${h}`,
     };
   });
