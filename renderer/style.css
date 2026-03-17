@@ -250,6 +250,36 @@ body {
   color: var(--text);
 }
 
+/* ── Stack export button ── */
+.stack-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.stack-btn:hover:not(:disabled) { background: #2563eb; }
+
+.stack-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stack-btn.hidden { display: none; }
+
+.stack-btn.processing {
+  background: #333;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
 /* ── Refresh button ── */
 .device-group-btn {
   flex: 0 0 auto;

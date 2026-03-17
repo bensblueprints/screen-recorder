@@ -77,6 +77,14 @@ ipcMain.handle('start-recording', async (event, opts) => {
 
 ipcMain.handle('stop-recording', () => recorder.stop());
 
+ipcMain.handle('stack-export', async (event, sessionPath, encoder) => {
+  return recorder.stackExport(sessionPath, encoder, (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('stack-progress', progress);
+    }
+  });
+});
+
 ipcMain.handle('get-status', () => recorder.getStatus());
 
 ipcMain.handle('get-config', () => ({

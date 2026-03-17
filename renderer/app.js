@@ -4,8 +4,9 @@ let encoder = 'libx264';
 let outputDir = '';
 let screenStream = null;
 let webcamStream = null;
-let displays = [];       // Electron display objects with bounds
-let screenSources = [];  // desktopCapturer sources for preview
+let displays = [];
+let screenSources = [];
+let lastSessionDir = null; // for stack export
 
 // ── DOM refs ──
 const $ = (s) => document.querySelector(s);
@@ -27,6 +28,8 @@ const refreshBtn = $('#refreshBtn');
 const outputPath = $('#outputPath');
 const changeOutputBtn = $('#changeOutputBtn');
 const openOutputBtn = $('#openOutputBtn');
+const stackBtn = $('#stackBtn');
+const stackLabel = $('#stackLabel');
 
 // ── Init ──
 async function init() {
@@ -319,7 +322,12 @@ async function toggleRecording() {
       timer.classList.remove('recording');
 
       if (result.sessionDir) {
+        lastSessionDir = result.sessionDir;
         fileInfo.textContent = `Saved to: ${result.sessionDir}`;
+        // Show stack button if we have both files
+        if (result.screenFile && result.webcamFile) {
+          stackBtn.classList.remove('hidden');
+        }
       } else {
         fileInfo.textContent = 'Saved';
       }
@@ -371,19 +379,7 @@ async function toggleRecording() {
       timer.classList.add('recording');
       fileInfo.textContent = '';
       console.log('Recording started:', result);
-
-      // Try to reopen webcam preview after FFmpeg has the device
-      // Many Windows camera drivers allow shared access
-      if (opts.webcamDevice) {
-        setTimeout(async () => {
-          try {
-            await startWebcamPreview();
-            console.log('Webcam preview restored during recording');
-          } catch (e) {
-            console.log('Webcam preview not available during recording (exclusive lock)');
-          }
-        }, 1000);
-      }
+      stackBtn.classList.add('hidden'); // hide stack button during recording
     } catch (e) {
       console.error('Start failed:', e);
       const msg = (e.message || String(e)).replace('Error invoking remote method \'start-recording\': Error: ', '');
@@ -405,11 +401,44 @@ window.api.onRecordingUpdate((status) => {
   fileInfo.textContent = parts.join('  |  ');
 });
 
+// ── Stack Export ──
+async function doStackExport() {
+  if (!lastSessionDir) return;
+  stackBtn.disabled = true;
+  stackBtn.classList.add('processing');
+  stackLabel.textContent = 'Exporting...';
+  fileInfo.textContent = 'Creating stacked video (screen top + webcam bottom)...';
+
+  try {
+    const result = await window.api.stackExport(lastSessionDir, encoder);
+    stackLabel.textContent = 'Stack Export';
+    stackBtn.classList.remove('processing');
+    stackBtn.disabled = false;
+    fileInfo.textContent = `Stacked video saved: ${formatBytes(result.size)}`;
+    // Open the session folder so user can see all 3 files
+    window.api.openFolder(lastSessionDir);
+  } catch (e) {
+    stackLabel.textContent = 'Stack Export';
+    stackBtn.classList.remove('processing');
+    stackBtn.disabled = false;
+    const msg = (e.message || String(e)).replace('Error invoking remote method \'stack-export\': Error: ', '');
+    fileInfo.textContent = `Stack error: ${msg.slice(0, 150)}`;
+  }
+}
+
+window.api.onStackProgress((progress) => {
+  fileInfo.textContent = `Stacking... ${progress}`;
+});
+
 // ── Event listeners ──
 recordBtn.addEventListener('click', toggleRecording);
+stackBtn.addEventListener('click', doStackExport);
 webcamSelect.addEventListener('change', startWebcamPreview);
 screenSelect.addEventListener('change', startScreenPreview);
-folderBtn.addEventListener('click', () => window.api.openFolder(outputDir));
+folderBtn.addEventListener('click', () => {
+  if (lastSessionDir) window.api.openFolder(lastSessionDir);
+  else window.api.openFolder(outputDir);
+});
 openOutputBtn.addEventListener('click', () => window.api.openFolder(outputDir));
 changeOutputBtn.addEventListener('click', async () => {
   const newPath = await window.api.chooseFolder();

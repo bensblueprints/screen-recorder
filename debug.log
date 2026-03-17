@@ -5,3 +5,30 @@
 [2026-03-17T02:48:01.378Z] [webcam] Recording OK
 [2026-03-17T02:48:20.145Z] [screen] Exited code: 0
 [2026-03-17T02:48:20.710Z] [webcam] Exited code: 0
+[2026-03-17T02:51:24.983Z] start() opts: {"encoder":"h264_nvenc","webcamDevice":"OsmoPocket3","audioDevice":"Communications - MOTIV Mix Virtual Output (Shure Virtual Audio)","resolution":"1280x720","display":{"x":0,"y":270,"width":1536,"height":864}}
+[2026-03-17T02:51:24.987Z] [screen] Args: -probesize 10M -thread_queue_size 1024 -f gdigrab -framerate 30 -draw_mouse 1 -offset_x 0 -offset_y 270 -video_size 1536x864 -i desktop -pix_fmt yuv420p -c:v h264_nvenc -preset p4 -cq 20 -an -movflags +faststart -y C:\Users\admin\Desktop\Github Repo Backup 2-18-2026\screen-recorder\recordings\2026-03-17T02-51-24\screen.mp4
+[2026-03-17T02:51:27.323Z] [webcam] Args: -thread_queue_size 1024 -f dshow -video_size 1280x720 -framerate 30 -rtbufsize 256M -i video=OsmoPocket3:audio=Communications - MOTIV Mix Virtual Output (Shure Virtual Audio) -pix_fmt yuv420p -c:v h264_nvenc -preset p4 -cq 20 -c:a aac -b:a 192k -movflags +faststart -y C:\Users\admin\Desktop\Github Repo Backup 2-18-2026\screen-recorder\recordings\2026-03-17T02-51-24\webcam.mp4
+[2026-03-17T02:51:29.403Z] [screen] Exited code: 4294967291
+[2026-03-17T02:51:29.404Z] [screen] STDERR: able-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper
+  libavutil      60.  8.100 / 60.  8.100
+  libavcodec     62. 11.100 / 62. 11.100
+  libavformat    62.  3.100 / 62.  3.100
+  libavdevice    62.  1.100 / 62.  1.100
+  libavfilter    11.  4.100 / 11.  4.100
+  libswscale      9.  1.100 /  9.  1.100
+  libswresample   6.  1.100 /  6.  1.100
+[gdigrab @ 00000208b31e6c00] Capture area (0,270),(1536,1134) extends outside window area (0,0),(3840,1080)Error opening input: I/O error
+Error opening input file desktop.
+Error opening input files: I/O error
+
+[2026-03-17T02:51:30.108Z] [webcam] Exited code: 4294967291
+[2026-03-17T02:51:30.108Z] [webcam] STDERR:  / 11.  4.100
+  libswscale      9.  1.100 /  9.  1.100
+  libswresample   6.  1.100 /  6.  1.100
+[dshow @ 0000023f38b56cc0] Could not find audio only device with name [Communications - MOTIV Mix Virtual Output (Shure Virtual Audio)] among source devices of type audio.
+[dshow @ 0000023f38b56cc0] Searching for audio device within video devices for Communications - MOTIV Mix Virtual Output (Shure Virtual Audio)
+[dshow @ 0000023f38b56cc0] Could not find audio only device with name [Communications - MOTIV Mix Virtual Output (Shure Virtual Audio)] among source devices of type video.
+[in#0 @ 0000023f38b56a80] Error opening input: I/O error
+Error opening input file video=OsmoPocket3:audio=Communications - MOTIV Mix Virtual Output (Shure Virtual Audio).
+Error opening input files: I/O error
+

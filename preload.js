@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('api', {
   getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
   startRecording: (opts) => ipcRenderer.invoke('start-recording', opts),
   stopRecording: () => ipcRenderer.invoke('stop-recording'),
+  stackExport: (sessionPath, encoder) => ipcRenderer.invoke('stack-export', sessionPath, encoder),
+  onStackProgress: (cb) => {
+    ipcRenderer.on('stack-progress', (_event, data) => cb(data));
+  },
   getStatus: () => ipcRenderer.invoke('get-status'),
   getConfig: () => ipcRenderer.invoke('get-config'),
   openFolder: (path) => ipcRenderer.invoke('open-folder', path),
