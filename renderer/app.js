@@ -371,6 +371,19 @@ async function toggleRecording() {
       timer.classList.add('recording');
       fileInfo.textContent = '';
       console.log('Recording started:', result);
+
+      // Try to reopen webcam preview after FFmpeg has the device
+      // Many Windows camera drivers allow shared access
+      if (opts.webcamDevice) {
+        setTimeout(async () => {
+          try {
+            await startWebcamPreview();
+            console.log('Webcam preview restored during recording');
+          } catch (e) {
+            console.log('Webcam preview not available during recording (exclusive lock)');
+          }
+        }, 1000);
+      }
     } catch (e) {
       console.error('Start failed:', e);
       const msg = (e.message || String(e)).replace('Error invoking remote method \'start-recording\': Error: ', '');

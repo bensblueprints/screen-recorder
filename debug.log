@@ -1,0 +1,7 @@
+[2026-03-17T02:47:56.482Z] start() opts: {"encoder":"h264_nvenc","webcamDevice":"OsmoPocket3","audioDevice":"Microphone (Shure MV7+)","resolution":"1280x720","display":{"x":1536,"y":0,"width":1920,"height":1080}}
+[2026-03-17T02:47:56.485Z] [screen] Args: -probesize 10M -thread_queue_size 1024 -f gdigrab -framerate 30 -draw_mouse 1 -offset_x 1536 -offset_y 0 -video_size 1920x1080 -i desktop -pix_fmt yuv420p -c:v h264_nvenc -preset p4 -cq 20 -an -movflags +faststart -y C:\Users\admin\Desktop\Github Repo Backup 2-18-2026\screen-recorder\recordings\2026-03-17T02-47-56\screen.mp4
+[2026-03-17T02:47:58.146Z] [webcam] Args: -thread_queue_size 1024 -f dshow -video_size 1280x720 -framerate 30 -rtbufsize 256M -i video=OsmoPocket3:audio=Microphone (Shure MV7+) -pix_fmt yuv420p -c:v h264_nvenc -preset p4 -cq 20 -c:a aac -b:a 192k -movflags +faststart -y C:\Users\admin\Desktop\Github Repo Backup 2-18-2026\screen-recorder\recordings\2026-03-17T02-47-56\webcam.mp4
+[2026-03-17T02:47:59.877Z] [screen] Recording OK
+[2026-03-17T02:48:01.378Z] [webcam] Recording OK
+[2026-03-17T02:48:20.145Z] [screen] Exited code: 0
+[2026-03-17T02:48:20.710Z] [webcam] Exited code: 0
