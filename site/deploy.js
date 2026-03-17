@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const https = require('https');
 
 const NETLIFY_TOKEN = 'nfp_2r8NMnaW5BxpaWHWXXu6ZbePvQAQjqkp682b';
-const SITE_NAME = 'screen-recorder-app';
+const SITE_NAME = 'screen-recorder-am';
 const SITE_DIR = path.join(__dirname);
 
 // ── Helpers ──
