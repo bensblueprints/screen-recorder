@@ -63,6 +63,12 @@ async function loadDevices() {
     console.warn('Browser device enumeration failed:', e);
   }
 
+  // Browser appends USB vendor:product IDs like " (14ed:1019)" to labels
+  // Strip these so names match FFmpeg's DirectShow names
+  function stripUsbId(label) {
+    return label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, '').trim();
+  }
+
   // ── Populate screen dropdown ──
   screenSelect.innerHTML = '';
   if (displays.length <= 1) {
@@ -94,12 +100,13 @@ async function loadDevices() {
 
   // Add browser cameras that FFmpeg didn't find (e.g. USB cameras like Osmo Pocket)
   for (const bd of browserVideos) {
+    const cleanLabel = stripUsbId(bd.label);
     const alreadyListed = [...cameraNames].some(n =>
-      bd.label.toLowerCase().includes(n) || n.includes(bd.label.toLowerCase())
+      cleanLabel.toLowerCase().includes(n) || n.includes(cleanLabel.toLowerCase())
     );
     if (!alreadyListed) {
-      cameras.push({ name: bd.label, ffmpegName: bd.label });
-      cameraNames.add(bd.label.toLowerCase());
+      cameras.push({ name: cleanLabel, ffmpegName: cleanLabel });
+      cameraNames.add(cleanLabel.toLowerCase());
     }
   }
 
@@ -123,12 +130,13 @@ async function loadDevices() {
 
   for (const bd of browserAudios) {
     if (bd.label.toLowerCase().includes('default')) continue;
+    const cleanLabel = stripUsbId(bd.label);
     const alreadyListed = [...micNames].some(n =>
-      bd.label.toLowerCase().includes(n) || n.includes(bd.label.toLowerCase())
+      cleanLabel.toLowerCase().includes(n) || n.includes(cleanLabel.toLowerCase())
     );
     if (!alreadyListed) {
-      mics.push({ name: bd.label, ffmpegName: bd.label });
-      micNames.add(bd.label.toLowerCase());
+      mics.push({ name: cleanLabel, ffmpegName: cleanLabel });
+      micNames.add(cleanLabel.toLowerCase());
     }
   }
 

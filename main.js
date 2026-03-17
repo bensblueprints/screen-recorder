@@ -40,13 +40,20 @@ ipcMain.handle('get-screen-sources', async () => {
 
 ipcMain.handle('get-displays', () => {
   const displays = screen.getAllDisplays();
+  // Get the full virtual desktop bounds to validate offsets
+  const allX = displays.map(d => d.bounds.x);
+  const allY = displays.map(d => d.bounds.y);
+  const minX = Math.min(...allX);
+  const minY = Math.min(...allY);
+
   return displays.map((d, i) => {
-    // gdigrab uses physical pixel coordinates
-    const w = d.size.width;   // physical pixels
-    const h = d.size.height;  // physical pixels
-    // For offset, Electron bounds are logical — multiply by scaleFactor for physical
-    const x = Math.round(d.bounds.x * d.scaleFactor);
-    const y = Math.round(d.bounds.y * d.scaleFactor);
+    const w = d.size.width;
+    const h = d.size.height;
+    // gdigrab uses (0,0) as top-left of virtual desktop
+    // Electron may report negative bounds if monitors are arranged above/left
+    // Offset from the min corner so gdigrab coords are always >= 0
+    const x = Math.round((d.bounds.x - minX) * d.scaleFactor);
+    const y = Math.round((d.bounds.y - minY) * d.scaleFactor);
     return {
       id: d.id,
       name: `Display ${i + 1}${d.bounds.x === 0 && d.bounds.y === 0 ? ' (Primary)' : ''}`,
