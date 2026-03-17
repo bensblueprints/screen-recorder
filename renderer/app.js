@@ -266,23 +266,75 @@ function basename(filepath) {
   return filepath ? filepath.replace(/\\/g, '/').split('/').pop() : '';
 }
 
+// ── Release all preview streams so FFmpeg can access devices ──
+function releaseAllPreviews() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    webcamPreview.srcObject = null;
+    webcamPreview.classList.remove('active');
+    webcamPlaceholder.textContent = 'Recording...';
+    webcamPlaceholder.classList.remove('hidden');
+  }
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+    screenPreview.srcObject = null;
+    screenPreview.classList.remove('active');
+    screenPlaceholder.textContent = 'Recording...';
+    screenPlaceholder.classList.remove('hidden');
+  }
+}
+
+// ── Restore previews after recording stops ──
+function restorePreviews() {
+  if (webcamSelect.value) startWebcamPreview();
+  startScreenPreview();
+}
+
 // ── Recording ──
 async function toggleRecording() {
   if (isRecording) {
     recordBtn.disabled = true;
     recordLabel.textContent = 'Stopping...';
 
-    const result = await window.api.stopRecording();
-    isRecording = false;
-    recordBtn.classList.remove('recording');
-    recordBtn.disabled = false;
-    recordLabel.textContent = 'Record';
-    timer.classList.remove('recording');
+    // Timeout: if stop takes >12s, force reset the UI
+    const stopTimeout = setTimeout(() => {
+      console.warn('Stop timed out, resetting UI');
+      isRecording = false;
+      recordBtn.classList.remove('recording');
+      recordBtn.disabled = false;
+      recordLabel.textContent = 'Record';
+      timer.classList.remove('recording');
+      fileInfo.textContent = 'Stop timed out — files may be incomplete';
+      restorePreviews();
+    }, 12000);
 
-    const parts = [];
-    if (result.screenFile) parts.push(basename(result.screenFile));
-    if (result.webcamFile) parts.push(basename(result.webcamFile));
-    fileInfo.textContent = parts.length ? `Saved: ${parts.join(' + ')}` : '';
+    try {
+      const result = await window.api.stopRecording();
+      clearTimeout(stopTimeout);
+      isRecording = false;
+      recordBtn.classList.remove('recording');
+      recordBtn.disabled = false;
+      recordLabel.textContent = 'Record';
+      timer.classList.remove('recording');
+
+      const parts = [];
+      if (result.screenFile) parts.push(basename(result.screenFile));
+      if (result.webcamFile) parts.push(basename(result.webcamFile));
+      fileInfo.textContent = parts.length ? `Saved: ${parts.join(' + ')}` : '';
+    } catch (e) {
+      clearTimeout(stopTimeout);
+      isRecording = false;
+      recordBtn.classList.remove('recording');
+      recordBtn.disabled = false;
+      recordLabel.textContent = 'Record';
+      timer.classList.remove('recording');
+      fileInfo.textContent = `Stop error: ${e.message || e}`;
+    }
+
+    // Restore previews after FFmpeg releases devices
+    setTimeout(restorePreviews, 500);
   } else {
     // Build display bounds for the selected screen
     const selectedIdx = parseInt(screenSelect.value) || 0;
@@ -304,16 +356,27 @@ async function toggleRecording() {
     recordBtn.disabled = true;
     recordLabel.textContent = 'Starting...';
 
+    // CRITICAL: Release browser preview streams BEFORE FFmpeg tries to open devices
+    // DirectShow on Windows requires exclusive access to webcam devices
+    releaseAllPreviews();
+
+    // Give Windows a moment to release the device handles
+    await new Promise(r => setTimeout(r, 500));
+
     try {
-      await window.api.startRecording(opts);
+      const result = await window.api.startRecording(opts);
       isRecording = true;
       recordBtn.classList.add('recording');
       recordLabel.textContent = 'Stop';
       timer.classList.add('recording');
       fileInfo.textContent = '';
+      console.log('Recording started:', result);
     } catch (e) {
       console.error('Start failed:', e);
-      fileInfo.textContent = `Error: ${e.message || e}`;
+      const msg = (e.message || String(e)).replace('Error invoking remote method \'start-recording\': Error: ', '');
+      fileInfo.textContent = `Error: ${msg.slice(0, 200)}`;
+      // Restore previews since recording failed
+      restorePreviews();
     }
     recordBtn.disabled = false;
   }

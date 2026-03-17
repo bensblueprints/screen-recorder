@@ -40,16 +40,24 @@ ipcMain.handle('get-screen-sources', async () => {
 
 ipcMain.handle('get-displays', () => {
   const displays = screen.getAllDisplays();
-  return displays.map((d, i) => ({
-    id: d.id,
-    name: `Display ${i + 1}${d.bounds.x === 0 && d.bounds.y === 0 ? ' (Primary)' : ''}`,
-    width: d.bounds.width * d.scaleFactor,
-    height: d.bounds.height * d.scaleFactor,
-    x: d.bounds.x,
-    y: d.bounds.y,
-    scaleFactor: d.scaleFactor,
-    label: `${Math.round(d.bounds.width * d.scaleFactor)}x${Math.round(d.bounds.height * d.scaleFactor)}`,
-  }));
+  return displays.map((d, i) => {
+    // gdigrab uses physical pixel coordinates
+    const w = d.size.width;   // physical pixels
+    const h = d.size.height;  // physical pixels
+    // For offset, Electron bounds are logical — multiply by scaleFactor for physical
+    const x = Math.round(d.bounds.x * d.scaleFactor);
+    const y = Math.round(d.bounds.y * d.scaleFactor);
+    return {
+      id: d.id,
+      name: `Display ${i + 1}${d.bounds.x === 0 && d.bounds.y === 0 ? ' (Primary)' : ''}`,
+      width: w,
+      height: h,
+      x,
+      y,
+      scaleFactor: d.scaleFactor,
+      label: `${w}x${h}`,
+    };
+  });
 });
 
 ipcMain.handle('start-recording', async (event, opts) => {
