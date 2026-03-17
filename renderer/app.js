@@ -274,8 +274,8 @@ function basename(filepath) {
   return filepath ? filepath.replace(/\\/g, '/').split('/').pop() : '';
 }
 
-// ── Release all preview streams so FFmpeg can access devices ──
-function releaseAllPreviews() {
+// ── Release WEBCAM preview only (screen preview stays — gdigrab doesn't conflict) ──
+function releaseWebcamPreview() {
   if (webcamStream) {
     webcamStream.getTracks().forEach(t => t.stop());
     webcamStream = null;
@@ -284,20 +284,11 @@ function releaseAllPreviews() {
     webcamPlaceholder.textContent = 'Recording...';
     webcamPlaceholder.classList.remove('hidden');
   }
-  if (screenStream) {
-    screenStream.getTracks().forEach(t => t.stop());
-    screenStream = null;
-    screenPreview.srcObject = null;
-    screenPreview.classList.remove('active');
-    screenPlaceholder.textContent = 'Recording...';
-    screenPlaceholder.classList.remove('hidden');
-  }
 }
 
-// ── Restore previews after recording stops ──
-function restorePreviews() {
+// ── Restore webcam preview after recording stops ──
+function restoreWebcamPreview() {
   if (webcamSelect.value) startWebcamPreview();
-  startScreenPreview();
 }
 
 // ── Recording ──
@@ -315,7 +306,7 @@ async function toggleRecording() {
       recordLabel.textContent = 'Record';
       timer.classList.remove('recording');
       fileInfo.textContent = 'Stop timed out — files may be incomplete';
-      restorePreviews();
+      restoreWebcamPreview();
     }, 12000);
 
     try {
@@ -327,10 +318,11 @@ async function toggleRecording() {
       recordLabel.textContent = 'Record';
       timer.classList.remove('recording');
 
-      const parts = [];
-      if (result.screenFile) parts.push(basename(result.screenFile));
-      if (result.webcamFile) parts.push(basename(result.webcamFile));
-      fileInfo.textContent = parts.length ? `Saved: ${parts.join(' + ')}` : '';
+      if (result.sessionDir) {
+        fileInfo.textContent = `Saved to: ${result.sessionDir}`;
+      } else {
+        fileInfo.textContent = 'Saved';
+      }
     } catch (e) {
       clearTimeout(stopTimeout);
       isRecording = false;
@@ -341,8 +333,8 @@ async function toggleRecording() {
       fileInfo.textContent = `Stop error: ${e.message || e}`;
     }
 
-    // Restore previews after FFmpeg releases devices
-    setTimeout(restorePreviews, 500);
+    // Restore webcam preview after FFmpeg releases the device
+    setTimeout(restoreWebcamPreview, 500);
   } else {
     // Build display bounds for the selected screen
     const selectedIdx = parseInt(screenSelect.value) || 0;
@@ -364,12 +356,12 @@ async function toggleRecording() {
     recordBtn.disabled = true;
     recordLabel.textContent = 'Starting...';
 
-    // CRITICAL: Release browser preview streams BEFORE FFmpeg tries to open devices
-    // DirectShow on Windows requires exclusive access to webcam devices
-    releaseAllPreviews();
+    // Release webcam preview only — screen preview (desktopCapturer) doesn't
+    // conflict with gdigrab since they use different capture APIs
+    releaseWebcamPreview();
 
-    // Give Windows a moment to release the device handles
-    await new Promise(r => setTimeout(r, 500));
+    // Brief pause for Windows to release the DirectShow device handle
+    await new Promise(r => setTimeout(r, 200));
 
     try {
       const result = await window.api.startRecording(opts);
@@ -383,8 +375,7 @@ async function toggleRecording() {
       console.error('Start failed:', e);
       const msg = (e.message || String(e)).replace('Error invoking remote method \'start-recording\': Error: ', '');
       fileInfo.textContent = `Error: ${msg.slice(0, 200)}`;
-      // Restore previews since recording failed
-      restorePreviews();
+      restoreWebcamPreview();
     }
     recordBtn.disabled = false;
   }
