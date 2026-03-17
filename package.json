@@ -25,10 +25,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico",
-      "sign": false
+      "icon": "icon.ico"
     },
-    "forceCodeSigning": false,
     "mac": {
       "target": "dmg",
       "icon": "icon.icns",
